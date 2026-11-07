@@ -1,8 +1,8 @@
 {
+  "id": "lsl-crm-app",
   "name": "La suite logique · CRM",
   "short_name": "LSL CRM",
-  "description": "Contacts, échanges, projets et veille de La suite logique",
-  "start_url": "./#/aujourdhui",
+  "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f3ee",
