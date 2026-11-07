@@ -9,7 +9,7 @@
 
   var bar = document.createElement('div');
   bar.id = 'installBar';
-  bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:#e0673a;color:#fff;font:600 15px/1.3 system-ui,sans-serif';
+  bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:#7659ff;color:#fff;font:600 15px/1.3 system-ui,sans-serif';
   bar.innerHTML = '<span style="font-size:22px">📲</span><span id="installTxt" style="flex:1"></span>' +
     '<button id="installBtn" style="border:0;border-radius:10px;padding:9px 14px;background:#fff;color:#1f2a44;font:700 15px system-ui,sans-serif">Installer</button>' +
     '<button id="installClose" aria-label="Masquer" style="border:0;background:none;color:#fff;font-size:20px;padding:4px 6px">✕</button>';

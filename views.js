@@ -11,7 +11,7 @@ function renderLogin() {
   document.body.classList.add('login');
   $('#banner').innerHTML = '';
   $('#view').innerHTML = '<div class="login-box">' +
-    '<div class="login-logo">ls</div><h1>La suite logique</h1><p class="muted">Le carnet de contacts et de projets de l\'équipe.</p>' +
+    '<img class="login-logo" src="logo.png" alt="La suite logique"><p class="muted">Le carnet de contacts et de projets de l\'équipe.</p>' +
     '<form id="loginForm" class="card">' +
     '<label>Adresse e-mail<input name="email" type="email" autocomplete="username" required></label>' +
     '<label>Mot de passe<input name="pw" type="password" autocomplete="current-password" minlength="6" required></label>' +
@@ -19,7 +19,7 @@ function renderLogin() {
     '<button class="btn primary wide" name="mode" value="in">Se connecter</button>' +
     '<button class="btn ghost wide" name="mode" value="up" type="submit">Créer mon compte</button>' +
     '<button class="btn link" type="button" data-act="pw-reset">Mot de passe oublié ?</button>' +
-    '</form><p class="muted small">Pour rejoindre la base partagée, Julien doit d\'abord ajouter ton adresse dans ses membres.</p></div>';
+    '</form><p class="muted small">Pour rejoindre la base partagée, ton adresse doit d\'abord être ajoutée dans les membres de l\'appli.</p></div>';
 }
 
 /* ---------- Aujourd'hui ---------- */
