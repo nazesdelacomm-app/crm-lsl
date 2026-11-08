@@ -1,6 +1,6 @@
 /* core.js — constantes, outils, navigation, fenêtres. */
 'use strict';
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 
 const STATUTS = [
   ['cible', 'Cible'], ['contacte', 'Contacté'], ['rdv', 'RDV'], ['proposition', 'Proposition'],

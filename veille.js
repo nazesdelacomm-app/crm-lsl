@@ -53,7 +53,7 @@
     if (opts.search) body.tools = [{ google_search: {} }];
     else if (opts.json) body.generationConfig.responseMimeType = 'application/json';
     const pref = opts.search ? IA.modelSearch() : IA.modelText();
-    let list = [pref], lastMsg = '', triedAll = false, searchRefused = false;
+    let list = [pref], lastMsg = '', triedAll = false, searchRefused = false, quotaZero = false;
     for (let i = 0; i < list.length; i++) {
       const model = list[i];
       const { r, j } = await callModel(model, key, body);
@@ -67,12 +67,18 @@
       }
       const msg = (j.error && j.error.message) || ('HTTP ' + r.status);
       lastMsg = msg;
-      if (r.status === 429) throw new Error('Quota gratuit Gemini atteint pour aujourd\'hui. Réessaie demain (aucun frais).');
+      if (r.status === 429) {
+        // Google renvoie 429 pour 3 raisons différentes : modèle hors offre gratuite (limit: 0), limite par minute, limite par jour
+        if (/limit:\s*0\b/i.test(msg)) { quotaZero = true; }
+        else if (/per ?minute|PerMinute|retry in/i.test(msg)) throw new Error('Trop de demandes en une minute (limite Google). Réessaie dans 1 minute. Détail : ' + msg.slice(0, 160));
+        else throw new Error('Limite Google atteinte pour ce modèle. Détail : ' + msg.slice(0, 200));
+      }
       if ((r.status === 400 || r.status === 403) && /API key|API_KEY|permission/i.test(msg) && !/model|search|tool|ground/i.test(msg)) throw new Error('Clé Gemini refusée : vérifie-la dans Plus → IA.');
       // modèle absent, retiré, ou recherche web non autorisée pour ce modèle : on essaie le suivant
       if (opts.search && /search|ground|tool/i.test(msg)) searchRefused = true;
       if (!triedAll) { triedAll = true; list = candidates(pref, await listModels(key), !!opts.search); i = Math.max(0, list.indexOf(model)); }
     }
+    if (quotaZero) throw new Error('Avec ta clé gratuite, Google n\'autorise ' + (opts.search ? 'la recherche web' : 'ce service') + ' sur aucun modèle disponible (quota à 0). Il faut activer la facturation sur le projet Google AI Studio. Détail : ' + lastMsg.slice(0, 160));
     if (opts.search && searchRefused) throw new Error('La recherche web de Gemini n\'est pas accessible avec cette clé gratuite. Détail : ' + lastMsg);
     throw new Error('Aucun modèle Gemini disponible avec cette clé. Détail : ' + lastMsg);
   }

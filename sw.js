@@ -1,5 +1,5 @@
 /* Service worker : l'appli s'ouvre même sans réseau, et se met à jour toute seule. */
-const CACHE = 'lsl-crm-1.2.0';
+const CACHE = 'lsl-crm-1.2.1';
 const FILES = ['./', './index.html', './styles.css', './config.js', './store.js', './veille.js', './core.js', './views.js', './views2.js', './forms.js', './install.js', './update.js', './logo.png', './poppins-400.woff2', './poppins-600.woff2', './poppins-800.woff2', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
