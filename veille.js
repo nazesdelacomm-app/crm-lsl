@@ -15,30 +15,66 @@
     bump(search) { const o = IA.count(); o.n++; if (search) o.s++; LS.setItem('lsl.gemini.count', JSON.stringify(o)); }
   };
 
-  async function gemini(prompt, opts) {
-    opts = opts || {};
-    const key = IA.key();
-    if (!key) throw new Error('Pas de clé Gemini : ajoute-la dans Plus → IA.');
-    const model = opts.search ? IA.modelSearch() : IA.modelText();
-    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: opts.temperature == null ? 0.3 : opts.temperature } };
-    if (opts.search) body.tools = [{ google_search: {} }];
-    else if (opts.json) body.generationConfig.responseMimeType = 'application/json';
+  /* Liste des modèles accessibles avec la clé (mise en cache 1 jour) */
+  async function listModels(key) {
+    const c = JSON.parse(LS.getItem('lsl.gemini.models') || 'null');
+    if (c && c.k === key.slice(-6) && Date.now() - c.t < 864e5) return c.m;
+    let m = [];
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key));
+      const j = await r.json();
+      m = (j.models || []).filter(x => (x.supportedGenerationMethods || []).includes('generateContent')).map(x => x.name.replace(/^models\//, ''));
+    } catch (e) { /* on garde la liste vide */ }
+    LS.setItem('lsl.gemini.models', JSON.stringify({ k: key.slice(-6), t: Date.now(), m }));
+    return m;
+  }
+  function candidates(pref, avail, search) {
+    const ok = n => /flash/.test(n) && !/(image|tts|audio|live|embedding|thinking|exp)/.test(n);
+    const order = search
+      ? [/^gemini-2\.5-flash-lite$/, /^gemini-2\.5-flash$/, /2\.5-flash-lite/, /2\.5-flash/, /flash-lite$/, /flash$/, /flash/]
+      : [/^gemini-3\.1-flash-lite$/, /flash-lite$/, /flash$/, /flash/];
+    const out = [pref];
+    order.forEach(re => avail.filter(n => ok(n) && re.test(n)).forEach(n => out.push(n)));
+    return out.filter((n, i) => n && out.indexOf(n) === i).slice(0, 8);
+  }
+  async function callModel(model, key, body) {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
     const j = await r.json().catch(() => ({}));
-    IA.bump(!!opts.search);
-    if (!r.ok) {
+    return { r, j };
+  }
+
+  async function gemini(prompt, opts) {
+    opts = opts || {};
+    const key = IA.key();
+    if (!key) throw new Error('Pas de clé Gemini : ajoute-la dans Plus → IA.');
+    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: opts.temperature == null ? 0.3 : opts.temperature } };
+    if (opts.search) body.tools = [{ google_search: {} }];
+    else if (opts.json) body.generationConfig.responseMimeType = 'application/json';
+    const pref = opts.search ? IA.modelSearch() : IA.modelText();
+    let list = [pref], lastMsg = '', triedAll = false, searchRefused = false;
+    for (let i = 0; i < list.length; i++) {
+      const model = list[i];
+      const { r, j } = await callModel(model, key, body);
+      IA.bump(!!opts.search);
+      if (r.ok) {
+        if (model !== pref) { if (opts.search) IA.setModels(model, null); else IA.setModels(null, model); }
+        const cand = (j.candidates || [])[0] || {};
+        const text = ((cand.content || {}).parts || []).map(p => p.text || '').join('').trim();
+        const sources = (((cand.groundingMetadata || {}).groundingChunks) || []).map(c => c.web).filter(Boolean).map(w => ({ uri: w.uri, title: w.title }));
+        return { text, sources, model };
+      }
       const msg = (j.error && j.error.message) || ('HTTP ' + r.status);
+      lastMsg = msg;
       if (r.status === 429) throw new Error('Quota gratuit Gemini atteint pour aujourd\'hui. Réessaie demain (aucun frais).');
-      if (r.status === 400 && /API key/i.test(msg)) throw new Error('Clé Gemini refusée : vérifie-la dans Plus → IA.');
-      if (r.status === 404) throw new Error('Modèle « ' + model + ' » introuvable : change-le dans Plus → IA.');
-      throw new Error('Gemini : ' + msg);
+      if ((r.status === 400 || r.status === 403) && /API key|API_KEY|permission/i.test(msg) && !/model|search|tool|ground/i.test(msg)) throw new Error('Clé Gemini refusée : vérifie-la dans Plus → IA.');
+      // modèle absent, retiré, ou recherche web non autorisée pour ce modèle : on essaie le suivant
+      if (opts.search && /search|ground|tool/i.test(msg)) searchRefused = true;
+      if (!triedAll) { triedAll = true; list = candidates(pref, await listModels(key), !!opts.search); i = Math.max(0, list.indexOf(model)); }
     }
-    const cand = (j.candidates || [])[0] || {};
-    const text = ((cand.content || {}).parts || []).map(p => p.text || '').join('').trim();
-    const sources = (((cand.groundingMetadata || {}).groundingChunks) || []).map(c => c.web).filter(Boolean).map(w => ({ uri: w.uri, title: w.title }));
-    return { text, sources };
+    if (opts.search && searchRefused) throw new Error('La recherche web de Gemini n\'est pas accessible avec cette clé gratuite. Détail : ' + lastMsg);
+    throw new Error('Aucun modèle Gemini disponible avec cette clé. Détail : ' + lastMsg);
   }
   function parseJSON(text) {
     let t = String(text || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
@@ -165,5 +201,5 @@
     return parseJSON(r.text);
   }
 
-  window.Veille = { IA, gemini, parseJSON, rechercheEntreprises, bodacc, bodaccSiren, creations, evenements, actus, miseEnForme, remplirRecap };
+  window.Veille = { IA, gemini, listModels, parseJSON, rechercheEntreprises, bodacc, bodaccSiren, creations, evenements, actus, miseEnForme, remplirRecap };
 })();

@@ -209,3 +209,8 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin:4px 0 10
 #toast.on{opacity:1;transform:translate(-50%,0)}
 
 @media (min-width:700px){.fab{right:calc(50% - 300px)}}
+
+/* bandeau de mise à jour */
+#updateBar{position:fixed;left:10px;right:10px;bottom:calc(70px + var(--safe-b));z-index:45;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--ink);color:#fff;box-shadow:0 8px 24px rgba(25,42,60,.35);max-width:620px;margin:0 auto}
+#updateBar small{display:block;opacity:.8;font-size:12.5px}
+#updateBar button{border:0;border-radius:10px;padding:9px 12px;background:var(--accent);color:#fff;font:600 14px Poppins,system-ui,sans-serif;white-space:nowrap}

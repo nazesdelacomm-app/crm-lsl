@@ -1,6 +1,6 @@
 /* Service worker : l'appli s'ouvre même sans réseau, et se met à jour toute seule. */
-const CACHE = 'lsl-crm-v2';
-const FILES = ['./', './index.html', './styles.css', './config.js', './store.js', './veille.js', './core.js', './views.js', './views2.js', './forms.js', './install.js', './logo.png', './poppins-400.woff2', './poppins-600.woff2', './poppins-800.woff2', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable.png'];
+const CACHE = 'lsl-crm-1.2.0';
+const FILES = ['./', './index.html', './styles.css', './config.js', './store.js', './veille.js', './core.js', './views.js', './views2.js', './forms.js', './install.js', './update.js', './logo.png', './poppins-400.woff2', './poppins-600.woff2', './poppins-800.woff2', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
@@ -11,7 +11,8 @@ self.addEventListener('activate', e => {
 // Les appels aux services (Firebase, Gemini, registre, BODACC) ne passent pas par le cache.
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const u = new URL(req.url);
+  if (req.method !== 'GET' || u.origin !== self.location.origin || u.pathname.endsWith('version.json')) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
